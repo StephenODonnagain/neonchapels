@@ -133,3 +133,34 @@ p {
     height: 220px;
   }
 }
+/* ===== Manifesto layout refinements ===== */
+
+.manifesto-main {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.manifesto-line {
+    margin-top: 40px;
+    font-size: 1.1rem;
+    line-height: 1.7;
+}
+
+.construction-note {
+    margin-top: 60px;
+    font-size: 0.95rem;
+    opacity: 0.85;
+}
+
+/* Globe sizing & centering */
+.globe-container {
+    display: flex;
+    justify-content: center;
+    margin: 60px 0 40px 0;
+}
+
+.globe {
+    width: 340px;
+    height: 340px;
+    margin: 0 auto;
+}
