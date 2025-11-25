@@ -30,50 +30,49 @@
 
   </main>
 
-<script>
-// =========================
-// NEONCHAPELS ROTATING GLOBE
-// =========================
 
-// Scene
-const scene = new THREE.Scene();
+  <!-- GLOBE SCRIPT -->
+  <script>
+    const scene = new THREE.Scene();
 
-// Camera
-const camera = new THREE.PerspectiveCamera(
-  55,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  1000
-);
-camera.position.z = 3;
+    const camera = new THREE.PerspectiveCamera(
+      55,
+      300 / 300,   // aspect ratio of your .globe box
+      0.1,
+      1000
+    );
 
-// Renderer
-const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight * 0.6);
-document.querySelector(".globe").appendChild(renderer.domElement);
+    camera.position.z = 3;
 
-// Geometry
-const geometry = new THREE.SphereGeometry(1, 64, 64);
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(300, 300);
 
-// Material
-const material = new THREE.MeshPhongMaterial({
-  color: 0x88ffcc,
-  emissive: 0x003322,
-  shininess: 80,
-  wireframe: true
-});
+    document.querySelector(".globe").appendChild(renderer.domElement);
 
-const sphere = new THREE.Mesh(geometry, material);
-scene.add(sphere);
+    const geometry = new THREE.SphereGeometry(1, 64, 64);
 
-// Light
-const light = new THREE.PointLight(0x88ffcc, 1.5, 100);
-light.position.set(4, 4, 6);
-scene.add(light);
+    const material = new THREE.MeshPhongMaterial({
+      color: 0x88ffcc,
+      emissive: 0x003322,
+      shininess: 80,
+      wireframe: true
+    });
 
-// Animate
-function animate() {
-  requestAnimationFrame(animate);
-  sphere.rotation.y += 0.0035;
-  sphere.rotation.x += 0.0005;
- 
+    const sphere = new THREE.Mesh(geometry, material);
+    scene.add(sphere);
+
+    const light = new THREE.PointLight(0x88ffcc, 1.5, 100);
+    light.position.set(4, 4, 6);
+    scene.add(light);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      sphere.rotation.y += 0.0035;
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+
+</body>
+</html>
