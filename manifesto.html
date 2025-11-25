@@ -6,30 +6,59 @@
   <link rel="stylesheet" href="styles.css">
 
   <!-- Three.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-</head>
-
-<body class="manifesto-body">
-
-  <main class="manifesto-main">
-
-    <p class="manifesto-line">
-      This is the beginning.<br>
-      Neon Chapels is a living architecture, a sanctuary of light,<br>
-      and a new kind of creative order.<br>
-      Everything here is built for clarity, generosity, and truth.
-    </p>
-
-    <div class="globe-container">
-      <div class="globe"></div>
-    </div>
-
-    <p class="construction-note">
-      These are the foundations of a website that is under construction.
-    </p>
-
-  </main>
 <script>
+// NEONCHAPELS centered neon globe
+
+const scene = new THREE.Scene();
+
+const camera = new THREE.PerspectiveCamera(
+  55,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
+
+camera.position.z = 3;
+
+const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight * 0.6);
+document.querySelector(".globe").appendChild(renderer.domElement);
+
+// Perfect sphere geometry
+const geometry = new THREE.SphereGeometry(1, 64, 64);
+
+// Neon material
+const material = new THREE.MeshPhongMaterial({
+  color: 0x88ffcc,
+  emissive: 0x003322,
+  shininess: 80,
+  wireframe: true
+});
+
+const sphere = new THREE.Mesh(geometry, material);
+scene.add(sphere);
+
+// Soft neon light
+const light = new THREE.PointLight(0x88ffcc, 1.5, 100);
+light.position.set(4, 4, 6);
+scene.add(light);
+
+// Animation
+function animate() {
+  requestAnimationFrame(animate);
+  sphere.rotation.y += 0.0035;
+  renderer.render(scene, camera);
+}
+
+animate();
+
+// Fix resizing
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight * 0.6);
+});
+</script>
   // Basic Three.js Globe
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth / 500, 0.1, 1000);
