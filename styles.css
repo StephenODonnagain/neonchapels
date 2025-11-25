@@ -1,0 +1,21 @@
+/* ====== NEON CHAPELS BASE STYLE ====== */
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: black;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+h1 {
+    font-size: 3rem;
+    margin-top: 60px;
+    letter-spacing: 3px;
+}
+
+p {
+    font-size: 1.2rem;
+    opacity: 0.8;
+}
