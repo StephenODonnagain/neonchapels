@@ -122,3 +122,8 @@ p {
     height: 300px;
     margin: auto;
 }
+.globe-container {
+    display: flex;
+    justify-content: center;
+    margin: 60px 0;
+}
