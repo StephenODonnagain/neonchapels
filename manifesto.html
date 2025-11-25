@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="styles.css">
 
-  <!-- Three.js core -->
+  <!-- Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 
 <body class="manifesto-body">
+
   <main class="manifesto-main">
 
     <p class="manifesto-line">
@@ -29,171 +30,53 @@
 
   </main>
 
-  <script>
-    // --------- Scene & renderer ---------
-    const scene = new THREE.Scene();
+<script>
+  // === Clean working globe ===
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(
+    75,
+    window.innerWidth / (window.innerHeight * 0.6),
+    0.1,
+    1000
+  );
 
-    const camera = new THREE.PerspectiveCamera(
-      45,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      100
-    );
-    camera.position.set(0, 0, 4);
+  const renderer = new THREE.WebGLRenderer({ alpha: true });
+  renderer.setSize(window.innerWidth, window.innerHeight * 0.6);
+  document.querySelector(".globe").appendChild(renderer.domElement);
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio || 1);
-    const initialWidth  = window.innerWidth * 0.6;
-    const initialHeight = window.innerHeight * 0.6;
-    renderer.setSize(initialWidth, initialHeight);
+  const geometry = new THREE.SphereGeometry(1, 64, 64);
 
-    const globeMount = document.querySelector(".globe");
-    globeMount.appendChild(renderer.domElement);
+  const material = new THREE.MeshPhongMaterial({
+    color: 0x88ffcc,
+    emissive: 0x116644,
+    shininess: 40,
+    wireframe: true
+  });
 
-    // --------- Globe with warm gradient ---------
-    const sphereGeometry = new THREE.SphereGeometry(1, 128, 128);
+  const sphere = new THREE.Mesh(geometry, material);
+  scene.add(sphere);
 
-    const topColor    = new THREE.Color(0x66ffbb);  // warm teal/green
-    const bottomColor = new THREE.Color(0xff7a4a);  // soft orange/red
+  const light = new THREE.PointLight(0x88ffcc, 2, 100);
+  light.position.set(3, 3, 3);
+  scene.add(light);
 
-    const positions = sphereGeometry.attributes.position;
-    const colors = [];
+  camera.position.z = 3;
 
-    for (let i = 0; i < positions.count; i++) {
-      const y = positions.getY(i);      // -1 .. 1
-      const t = (y + 1) / 2;            // 0 .. 1
-      const c = topColor.clone().lerp(bottomColor, t);
-      colors.push(c.r, c.g, c.b);
-    }
+  function animate() {
+    requestAnimationFrame(animate);
+    sphere.rotation.y += 0.003;
+    sphere.rotation.x += 0.001;
+    renderer.render(scene, camera);
+  }
 
-    sphereGeometry.setAttribute(
-      "color",
-      new THREE.Float32BufferAttribute(colors, 3)
-    );
+  animate();
 
-    const sphereMaterial = new THREE.MeshPhongMaterial({
-      vertexColors: true,
-      wireframe: true,
-      shininess: 80
-    });
+  window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / (window.innerHeight * 0.6);
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight * 0.6);
+  });
+</script>
 
-    const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-    scene.add(sphere);
-
-    // Lights – warm + gentle, low blue
-    const keyLight = new THREE.PointLight(0xfff5e0, 1.2, 20);
-    keyLight.position.set(4, 4, 6);
-    scene.add(keyLight);
-
-    const fillLight = new THREE.PointLight(0x44ffbb, 0.8, 20);
-    fillLight.position.set(-4, -2, -5);
-    scene.add(fillLight);
-
-    const ambient = new THREE.AmbientLight(0x222222);
-    scene.add(ambient);
-
-    // --------- Label sprites ("drifting continents") ---------
-    const labelSpecs = [
-      { text: "MANIFESTO",          lat:  40, lon: -20 },
-      { text: "DONATIONS",          lat:  55, lon:  60 },
-      { text: "EVENTS",             lat:  10, lon: -80 },
-      { text: "CREATIVE PROJECTS",  lat:   5, lon: 100 },
-      { text: "THE AQUIFER",        lat: -15, lon: -10 },
-      { text: "ARCHIVES",           lat: -35, lon: 140 }
-    ];
-
-    const labelSprites = [];
-
-    function makeLabelSprite(text) {
-      const canvas = document.createElement("canvas");
-      canvas.width = 512;
-      canvas.height = 256;
-      const ctx = canvas.getContext("2d");
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.font = "36px Arial";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-
-      // Soft neon glow
-      ctx.shadowColor = "rgba(255,255,255,0.9)";
-      ctx.shadowBlur = 18;
-      ctx.fillStyle = "rgba(255,255,255,0.92)";
-      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-
-      const texture = new THREE.CanvasTexture(canvas);
-      texture.needsUpdate = true;
-
-      const material = new THREE.SpriteMaterial({
-        map: texture,
-        transparent: true,
-        depthTest: true,
-        depthWrite: false,
-        opacity: 0.9
-      });
-
-      const sprite = new THREE.Sprite(material);
-      sprite.scale.set(1.6, 0.5, 1); // width, height
-      return sprite;
-    }
-
-    function latLonToPosition(lat, lon, radius) {
-      const phi   = (90 - lat) * (Math.PI / 180);
-      const theta = (lon + 180) * (Math.PI / 180);
-
-      const x = -radius * Math.sin(phi) * Math.cos(theta);
-      const z =  radius * Math.sin(phi) * Math.sin(theta);
-      const y =  radius * Math.cos(phi);
-      return new THREE.Vector3(x, y, z);
-    }
-
-    labelSpecs.forEach((spec, index) => {
-      const sprite = makeLabelSprite(spec.text);
-      const pos = latLonToPosition(spec.lat, spec.lon, 1.12);
-      sprite.position.copy(pos);
-      sphere.add(sprite); // parented to sphere so it rotates with it
-      labelSprites.push({ sprite, baseLat: spec.lat, baseLon: spec.lon, index });
-    });
-
-    // --------- Animation loop ---------
-    let t = 0;
-
-    function animate() {
-      requestAnimationFrame(animate);
-
-      t += 0.0025;
-
-      // Slow global rotation (feel of a world turning)
-      sphere.rotation.y += 0.0025;
-
-      // Gentle drifting of labels + fade when turning away
-      labelSprites.forEach((entry) => {
-        const driftLat = entry.baseLat + Math.sin(t * 0.9 + entry.index) * 2.5;
-        const driftLon = entry.baseLon + Math.cos(t * 0.7 + entry.index) * 4.0;
-
-        const pos = latLonToPosition(driftLat, driftLon, 1.12);
-        entry.sprite.position.copy(pos);
-
-        // Fade out as labels move toward the far side
-        const facing = pos.clone().normalize().dot(new THREE.Vector3(0, 0, 1));
-        const alpha = THREE.MathUtils.clamp((facing + 0.2) / 1.2, 0.0, 1.0);
-        entry.sprite.material.opacity = 0.15 + 0.85 * alpha;
-      });
-
-      renderer.render(scene, camera);
-    }
-
-    animate();
-
-    // --------- Resize handling ---------
-    window.addEventListener("resize", () => {
-      const width  = window.innerWidth * 0.6;
-      const height = window.innerHeight * 0.6;
-
-      renderer.setSize(width, height);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-    });
-  </script>
 </body>
 </html>
