@@ -19,3 +19,71 @@ p {
     font-size: 1.2rem;
     opacity: 0.8;
 }
+/* === PORTAL PAGE STYLING === */
+
+.portal-body {
+  background: black;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  padding-top: 120px;
+}
+
+.portal-container {
+  max-width: 700px;
+  margin: auto;
+}
+
+.portal-sub {
+  margin-top: 10px;
+  font-size: 18px;
+  color: #bbbbbb;
+}
+
+.enter-button {
+  display: inline-block;
+  margin-top: 40px;
+  padding: 14px 32px;
+  border: 2px solid #00ffcc;
+  color: #00ffcc;
+  text-decoration: none;
+  border-radius: 10px;
+  font-size: 20px;
+  transition: 0.3s ease;
+  box-shadow: 0 0 12px #00ffcc66;
+}
+
+.enter-button:hover {
+  background: #00ffcc;
+  color: black;
+  box-shadow: 0 0 22px #00ffccaa;
+}
+
+
+/* === MANIFESTO PAGE === */
+
+.manifesto-body {
+  background: black;
+  color: white;
+  font-family: Arial, sans-serif;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.manifesto-container {
+  max-width: 900px;
+  margin: auto;
+}
+
+.manifesto-intro {
+  margin-top: 30px;
+  font-size: 20px;
+  line-height: 1.6;
+  color: #e5e5e5;
+}
+
+.manifesto-coming {
+  margin-top: 40px;
+  font-size: 18px;
+  color: #c4c4c4;
+}
