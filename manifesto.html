@@ -30,48 +30,223 @@
 
   </main>
 
+  <!-- Vertex shader: breathing surface -->
+  <script id="globe-vertex" type="x-shader/x-vertex">
+    uniform float uTime;
+    varying vec3 vNormal;
+    varying vec3 vPosition;
 
-  <!-- GLOBE SCRIPT -->
+    void main() {
+      vNormal   = normalize(normalMatrix * normal);
+      vPosition = position;
+
+      // subtle breathing / living surface
+      float offset = 0.02 * sin(uTime * 0.7 + position.y * 3.0);
+      vec3 displaced = position + normal * offset;
+
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(displaced, 1.0);
+    }
+  </script>
+
+  <!-- Fragment shader: sunset → bridge → ocean + grain/crackle -->
+  <script id="globe-fragment" type="x-shader/x-fragment">
+    precision highp float;
+
+    uniform float uTime;
+    varying vec3 vNormal;
+    varying vec3 vPosition;
+
+    // simple hash for grain
+    float hash(vec2 p) {
+      return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453);
+    }
+
+    void main() {
+      vec3 n = normalize(vNormal);
+
+      // height from bottom (0) to top (1)
+      float h = n.y * 0.5 + 0.5;
+
+      // core colours
+      vec3 sunset = vec3(1.0, 0.36, 0.18);  // warm red/orange
+      vec3 bridge = vec3(0.94, 0.42, 0.55); // magenta / violet bridge
+      vec3 ocean  = vec3(0.20, 0.62, 1.0);  // deep blue
+
+      // vertical blend: sunset → bridge → ocean
+      vec3 topMix    = mix(bridge, ocean, smoothstep(0.35, 1.0, h));
+      vec3 baseColor = mix(sunset, topMix, smoothstep(0.0, 1.0, h));
+
+      // slow longitudinal drift so it never feels static
+      float band = 0.5 + 0.5 * sin(uTime * 0.2 + vPosition.x * 1.5);
+      baseColor = mix(baseColor, ocean, 0.08 * band);
+
+      // rim light for analog edge
+      float rim = pow(1.0 - max(dot(n, vec3(0.0, 0.0, 1.0)), 0.0), 2.0);
+      vec3 rimColor = vec3(1.0, 0.95, 0.8);
+      vec3 color = baseColor + rim * rimColor * 0.7;
+
+      // breathing glow
+      float glow = 0.65 + 0.2 * sin(uTime * 0.9);
+      color *= glow;
+
+      // grain / crackle
+      float g1 = hash(vPosition.xy * 12.0 + uTime * 0.7);
+      float g2 = hash(vPosition.zy * 18.0 - uTime * 0.4);
+      float grain = (g1 + g2) * 0.5;
+      color += (grain - 0.5) * 0.05;
+
+      gl_FragColor = vec4(color, 1.0);
+    }
+  </script>
+
+  <!-- Three.js setup -->
   <script>
+    // Scene and camera
     const scene = new THREE.Scene();
 
     const camera = new THREE.PerspectiveCamera(
-      55,
-      300 / 300,   // aspect ratio of your .globe box
+      45,
+      1,    // square canvas
       0.1,
-      1000
+      100
     );
-
     camera.position.z = 3;
 
+    // Renderer
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setSize(300, 300);
+    const globeDiv = document.querySelector(".globe");
 
-    document.querySelector(".globe").appendChild(renderer.domElement);
+    const baseSize = Math.min(window.innerWidth * 0.6, 360);
+    renderer.setSize(baseSize, baseSize);
 
-    const geometry = new THREE.SphereGeometry(1, 64, 64);
+    if (globeDiv) {
+      globeDiv.appendChild(renderer.domElement);
+    }
 
-    const material = new THREE.MeshPhongMaterial({
-      color: 0x88ffcc,
-      emissive: 0x003322,
-      shininess: 80,
-      wireframe: true
+    // Sphere geometry
+    const radius = 1.0;
+    const geometry = new THREE.SphereGeometry(radius, 96, 96);
+
+    // Shader material
+    const uniforms = {
+      uTime: { value: 0.0 }
+    };
+
+    const shaderMaterial = new THREE.ShaderMaterial({
+      uniforms: uniforms,
+      vertexShader: document.getElementById("globe-vertex").textContent,
+      fragmentShader: document.getElementById("globe-fragment").textContent
     });
 
-    const sphere = new THREE.Mesh(geometry, material);
+    const sphere = new THREE.Mesh(geometry, shaderMaterial);
     scene.add(sphere);
 
-    const light = new THREE.PointLight(0x88ffcc, 1.5, 100);
+    // Faint wireframe overlay
+    const wireMaterial = new THREE.MeshBasicMaterial({
+      color: 0x88ffcc,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.25
+    });
+    const wireSphere = new THREE.Mesh(geometry, wireMaterial);
+    scene.add(wireSphere);
+
+    // Lights
+    const light = new THREE.PointLight(0xffffff, 1.2, 100);
     light.position.set(4, 4, 6);
     scene.add(light);
 
-    function animate() {
+    const ambient = new THREE.AmbientLight(0x222222);
+    scene.add(ambient);
+
+    // --- LABELS AS "ISLANDS" ---
+
+    const labels = [
+      { text: "MANIFESTO",      lat:  25, lon: -20 },
+      { text: "PROJECTS",       lat:  10, lon:  40 },
+      { text: "THE AQUIFER",    lat: -10, lon: -60 },
+      { text: "SUBMISSIONS",    lat:  30, lon: 110 },
+      { text: "ARCHIVES",       lat: -25, lon:  20 },
+      { text: "EVENTS",         lat:   5, lon: -120 },
+      { text: "DONATIONS",      lat:  40, lon: -80 },
+      { text: "CONTACT",        lat: -35, lon: 120 }
+    ];
+
+    function makeLabelSprite(text, color) {
+      const size = 256;
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext("2d");
+
+      ctx.clearRect(0, 0, size, size);
+
+      // neon-ish skinny type
+      ctx.font = "400 40px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      ctx.shadowColor = "rgba(255, 255, 255, 0.75)";
+      ctx.shadowBlur = 16;
+
+      ctx.fillStyle = color;
+      ctx.fillText(text, size / 2, size / 2);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+      const material = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true
+      });
+
+      const sprite = new THREE.Sprite(material);
+      // scale in world units
+      sprite.scale.set(0.7, 0.7, 0.7);
+      return sprite;
+    }
+
+    function placeLabelOnSphere(sprite, radius, latDeg, lonDeg) {
+      const lat = THREE.MathUtils.degToRad(latDeg);
+      const lon = THREE.MathUtils.degToRad(lonDeg);
+
+      const x = radius * Math.cos(lat) * Math.sin(lon);
+      const y = radius * Math.sin(lat);
+      const z = radius * Math.cos(lat) * Math.cos(lon);
+
+      const pos = new THREE.Vector3(x, y, z).multiplyScalar(1.05); // float slightly above
+      sprite.position.copy(pos);
+    }
+
+    const labelColor = "#ffe6d1"; // soft warm neon
+    labels.forEach(cfg => {
+      const sprite = makeLabelSprite(cfg.text, labelColor);
+      placeLabelOnSphere(sprite, radius, cfg.lat, cfg.lon);
+      // attach to sphere so they rotate with it
+      sphere.add(sprite);
+    });
+
+    // Animation loop
+    function animate(time) {
       requestAnimationFrame(animate);
-      sphere.rotation.y += 0.0035;
+      const t = time * 0.001;
+
+      uniforms.uTime.value = t;
+
+      sphere.rotation.y = t * 0.2;
+      sphere.rotation.x = 0.12 * Math.sin(t * 0.3);
+      wireSphere.rotation.copy(sphere.rotation);
+
       renderer.render(scene, camera);
     }
 
-    animate();
+    requestAnimationFrame(animate);
+
+    // Resize handling
+    window.addEventListener("resize", () => {
+      const newSize = Math.min(window.innerWidth * 0.6, 360);
+      renderer.setSize(newSize, newSize);
+      camera.updateProjectionMatrix();
+    });
   </script>
 
 </body>
