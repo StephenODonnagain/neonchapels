@@ -109,3 +109,16 @@ p {
     box-shadow: 0 0 22px #39ff14cc, 0 0 40px #39ff1480;
     transform: scale(1.05);
 }
+/* ==== Globe Container ==== */
+.globe-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 60px;
+    margin-bottom: 40px;
+}
+
+.globe {
+    width: 300px;
+    height: 300px;
+    margin: auto;
+}
