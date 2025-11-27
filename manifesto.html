@@ -5,78 +5,229 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="styles.css">
 
-  <!-- Load Three.js properly -->
+  <!-- Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 
 <body class="manifesto-body">
 
   <main class="manifesto-main">
-
     <p class="manifesto-line">
       This is the beginning.<br>
-      Neon Chapels is a living architecture, a sanctuary of light,<br>
-      and a new kind of creative order.<br>
-      Everything here is built for clarity, generosity, and truth.
+      Neon Chapels is taking shape.<br>
+      For now, this is only a fragment.
     </p>
-
-    <div class="globe-container">
-      <div class="globe"></div>
-    </div>
 
     <p class="construction-note">
       These are the foundations of a website that is under construction.
     </p>
-
   </main>
 
+  <!-- Floating draggable globe overlay -->
+  <div class="globe-outer">
+    <div class="globe"></div>
+  </div>
+
 <script>
-  // === CLEAN WORKING GLOBE ===
+  // ==============
+  // BASIC SCENE
+  // ==============
 
   const scene = new THREE.Scene();
 
   const camera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth / (window.innerHeight * 0.6),
+    55,
+    1,              // aspect will be corrected after we know size
     0.1,
     1000
   );
+  camera.position.z = 3;
 
-  const renderer = new THREE.WebGLRenderer({ alpha: true });
-  renderer.setSize(window.innerWidth, window.innerHeight * 0.6);
-  document.querySelector(".globe").appendChild(renderer.domElement);
+  const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+  const globeDiv = document.querySelector(".globe");
+  globeDiv.appendChild(renderer.domElement);
+
+  // Helper to set renderer & camera to match the globe div
+  function resizeRendererToGlobe() {
+    const rect = globeDiv.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+
+    renderer.setSize(width, height, false);
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+  }
+
+  resizeRendererToGlobe();
+
+  // ==============
+  // GLOBE + MATERIAL
+  // ==============
 
   const geometry = new THREE.SphereGeometry(1, 64, 64);
 
   const material = new THREE.MeshPhongMaterial({
-    color: 0x88ffcc,
-    emissive: 0x116644,
-    shininess: 40,
+    color: 0x66ffcc,      // warm teal
+    emissive: 0x221109,   // warm, not blue
+    shininess: 80,
     wireframe: true
   });
 
   const sphere = new THREE.Mesh(geometry, material);
   scene.add(sphere);
 
-  const light = new THREE.PointLight(0x88ffcc, 2, 100);
-  light.position.set(3, 3, 3);
+  // Soft warm light
+  const light = new THREE.PointLight(0xff9966, 2, 100);
+  light.position.set(4, 4, 6);
   scene.add(light);
 
-  camera.position.z = 3;
+  // Subtle ambient
+  const ambient = new THREE.AmbientLight(0x202020);
+  scene.add(ambient);
+
+  // ==============
+  // LABELS AS SPRITES ON THE SPHERE
+  // ==============
+
+  const labelNames = [
+    "MANIFESTO",
+    "DONATIONS",
+    "SUBMISSIONS",
+    "THE AQUIFER",
+    "ARCHIVES",
+    "EVENTS",
+    "CREATIVE PROJECTS"
+  ];
+
+  function createLabelSprite(text) {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const fontSize = 46;
+    ctx.font = `bold ${fontSize}px Arial`;
+
+    const textWidth = ctx.measureText(text).width;
+    canvas.width = textWidth + 40;
+    canvas.height = fontSize + 40;
+
+    // Redraw after changing canvas size
+    ctx.font = `bold ${fontSize}px Arial`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // Soft glow-ish text
+    ctx.fillStyle = "#ffeedd";
+    ctx.shadowColor = "#ffb088";
+    ctx.shadowBlur = 12;
+    ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.needsUpdate = true;
+
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true
+    });
+
+    const sprite = new THREE.Sprite(material);
+
+    // Scale sprite relative to world
+    const scaleFactor = 0.012;
+    sprite.scale.set(canvas.width * scaleFactor, canvas.height * scaleFactor, 1);
+
+    return sprite;
+  }
+
+  // Distribute labels on sphere surface
+  const labelSprites = [];
+  labelNames.forEach((text, i) => {
+    const sprite = createLabelSprite(text);
+
+    // Spherical coordinates
+    const phi = Math.acos(2 * (i + 0.5) / labelNames.length - 1); // 0..PI
+    const theta = Math.PI * (1 + Math.sqrt(5)) * i;               // golden angle
+
+    const radius = 1.15; // slightly above surface
+    const x = radius * Math.sin(phi) * Math.cos(theta);
+    const y = radius * Math.cos(phi);
+    const z = radius * Math.sin(phi) * Math.sin(theta);
+
+    sprite.position.set(x, y, z);
+    sphere.add(sprite);
+    labelSprites.push(sprite);
+  });
+
+  // ==============
+  // ANIMATION
+  // ==============
+
+  let autoRotationSpeed = 0.003;
+  let dragRotationBoost = 0;
 
   function animate() {
     requestAnimationFrame(animate);
-    sphere.rotation.y += 0.003;
-    sphere.rotation.x += 0.001;
+
+    sphere.rotation.y += autoRotationSpeed + dragRotationBoost;
+    dragRotationBoost *= 0.9; // quickly ease out extra rotation
+
     renderer.render(scene, camera);
   }
 
   animate();
 
+  // ==============
+  // HANDLE WINDOW RESIZE
+  // ==============
+
   window.addEventListener("resize", () => {
-    camera.aspect = window.innerWidth / (window.innerHeight * 0.6);
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight * 0.6);
+    resizeRendererToGlobe();
+  });
+
+  // ==============
+  // DRAGGING THE GLOBE AROUND SCREEN
+  // ==============
+
+  const globeOuter = document.querySelector(".globe-outer");
+  let isDragging = false;
+  let dragOffsetX = 0;
+  let dragOffsetY = 0;
+
+  globeOuter.addEventListener("pointerdown", (e) => {
+    isDragging = true;
+    globeOuter.setPointerCapture(e.pointerId);
+
+    // Fix position from center-translate to absolute pixels
+    const rect = globeOuter.getBoundingClientRect();
+    globeOuter.style.left = rect.left + "px";
+    globeOuter.style.top = rect.top + "px";
+    globeOuter.style.transform = "none";
+
+    dragOffsetX = e.clientX - rect.left;
+    dragOffsetY = e.clientY - rect.top;
+
+    globeOuter.classList.add("dragging");
+  });
+
+  window.addEventListener("pointermove", (e) => {
+    if (!isDragging) return;
+
+    const left = e.clientX - dragOffsetX;
+    const top = e.clientY - dragOffsetY;
+
+    globeOuter.style.left = left + "px";
+    globeOuter.style.top = top + "px";
+
+    // add a little mystical reverse-flow feel
+    dragRotationBoost = -e.movementX * 0.0008;
+  });
+
+  window.addEventListener("pointerup", (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    try {
+      globeOuter.releasePointerCapture(e.pointerId);
+    } catch (_) {}
+    globeOuter.classList.remove("dragging");
   });
 </script>
 
